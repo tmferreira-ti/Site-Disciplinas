@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Configuração de Rede - Administração de Sistemas</title>
+  <link rel="stylesheet" href="css/estilos.css">
+  <!-- CDN do asciinema-player -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/asciinema-player/2.4.1/asciinema-player.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/asciinema-player/2.4.1/asciinema-player.min.css">  
+</head>
+<body>
+  <h1>Configuração de Rede em Sistemas Operacionais Linux</h1>
+  <div class="note">
+    <p>Este artigo tem como objetivo orientar os estudantes na configuração de interfaces de rede e roteamento básico em ambientes Linux,
+       utilizando duas máquinas virtuais: <strong>SRV1 (servidor gateway)</strong> e <strong>SRV2 (cliente)</strong>. O foco é entender o
+        uso do utilitário ip, arquivos de configuração de rede, DHCP, rotas e NAT.</p>
+  </div>
+
+  <h1>VM SRV1 – Configuração de Interface e Roteamento</h1>
+
+  <h2>Verificando Interfaces de Rede</h2>
+  <div class="code-box">
+    <button class="copy-btn" data-target="cmd1">Copiar</button>
+    <pre id="cmd1">
+ip address show
+ip -brief address show</pre>
+  </div>
+
+  <p>Esses comandos exibem as interfaces de rede e seus respectivos endereços IP. A versão <code>-brief</code> apresenta uma saída resumida.</p>
+
+  <h2>Atribuindo IP Estático Temporário</h2>
+  <div class="code-box">
+    <button class="copy-btn" data-target="cmd2">Copiar</button>
+    <pre id="cmd2">
+ip address add 172.17.0.1/24 dev enp0s8
+ip link set up dev enp0s8</pre>
+  </div>
+
+  <p>Esses comandos configuram um IP estático temporário na interface enp0s8 e a ativam.</p>
+
+  <h2>Removendo Configuração Temporária</h2>
+  <div class="code-box">
+    <button class="copy-btn" data-target="cmd3">Copiar</button>
+    <pre id="cmd3">
+ip address del 172.17.0.1/24 dev enp0s8
+ip link set down dev enp0s8</pre>
+  </div>
+<p>Usado para desfazer a configuração anterior, útil para testes ou redefinições.
+
+</p>
+  <h2>Solicitando IP via DHCP</h2>
+  <div class="code-box">
+    <button class="copy-btn" data-target="cmd4">Copiar</button>
+    <pre id="cmd4">
+dhclient enp0s3</pre>
+  </div>
+<p>Esse comando solicita um IP dinâmico ao servidor DHCP para a interface <code>enp0s3</code>.</p>
+
+  <h2>Verificando Rotas</h2>
+  <div class="code-box">
+    <button class="copy-btn" data-target="cmd5">Copiar</button>
+    <pre id="cmd5">
+ip route show</pre>
+  </div>
+<p>Esse comando exibe as rotas de rede configuradas no sistema.</p>
+
+<h2>Configuração Permanente de Interfaces</h2>
+<p>Para tornar as configurações permanentes, edite o arquivo <code>/etc/network/interfaces</code> e adicione as seguintes linhas:</p>
+<div class="code-box">
+    <button class="copy-btn" data-target="cmd6">Copiar</button>
+    <pre id="cmd6">
+# Interface de loopback
+auto lo
+iface lo inet loopback
+      
+# Interface com DHCP
+auto enp0s3
+iface enp0s3 inet dhcp
+      
+# Interface com IP fixo
+auto enp0s8
+iface enp0s8 inet static
+    address 172.17.0.1
+    netmask 255.255.255.0
+
+# Interface adicional com IP fixo
+auto enp0s9
+iface enp0s9 inet static
+    address 192.168.56.102/24</pre>
+  </div>
+<p>Após editar o arquivo, reinicie a interface de rede com o comando <code>systemctl restart networking</code>.</p>
+  
+<h2>Ativando Roteamento IP</h2>
+<p>Para ativar o roteamento IP, edite o arquivo <code>/etc/sysctl.conf</code> e descomente a linha <code>net.ipv4.ip_forward=1</code>. Em seguida, aplique as alterações com:</p>
+<div class="code-box">
+    <button class="copy-btn" data-target="cmd7">Copiar</button>
+    <pre id="cmd7">
+sysctl -p</pre>
+  </div> 
+<p>Isso permite ao SRV1 encaminhar pacotes entre interfaces, essencial para funcionar como roteador.</p>
+
+<h2>Configurando NAT com iptables</h2>
+
+<p>Caso o Iptables não esteja instalado, instale o mesmo com o comando:</p>
+<div class="code-box">
+    <button class="copy-btn" data-target="cmd8">Copiar</button>
+    <pre id="cmd8">
+apt install iptables</pre>
+  </div>
+<p>Após a instalação, configure o NAT com os seguintes comandos:</p>
+<div class="code-box">
+    <button class="copy-btn" data-target="cmd9">Copiar</button>
+    <pre id="cmd9">
+iptables -t nat -A POSTROUTING -o enp0s3 -j MASQUERADE</pre>
+  </div>
+
+    <p>Isso permite que máquinas da rede 172.17.0.0/24 acessem a internet através da interface externa <code>enp0s3</code>.</p>
+
+  <h2>Salvando Configurações do Iptables</h2>
+  <p>Para garantir que as regras do iptables sejam aplicadas após reinicializações, salve-as com:</p>
+<div class="code-box">
+    <button class="copy-btn" data-target="cmd10">Copiar</button>
+    <pre id="cmd10">
+nft list ruleset > /etc/nftables.conf
+systemctl enable nftables
+systemctl restart nftables</pre>
+  </div>
+<p>Isso garante que as regras sejam aplicadas automaticamente após reinicializações.</p>
+
+<h1>VM SRV2 – Cliente com IP Estático e Rota Padrão</h1>
+
+<h2>Configurando IP Temporário</h2>
+
+<p>Na VM SRV2, configure um IP estático temporário com:</p>
+<div class="code-box">
+    <button class="copy-btn" data-target="cmd11">Copiar</button>
+    <pre id="cmd11">
+ip address add 172.17.0.2/24 dev enp0s3
+ip link set up dev enp0s3</pre>
+  </div>
+
+<h2>Definindo Rota Padrão</h2>
+<p>Defina a rota padrão para o SRV1 com:</p>
+<div class="code-box">
+    <button class="copy-btn" data-target="cmd12">Copiar</button>
+    <pre id="cmd12">
+      ip route add default via 172.17.0.1 dev enp0s3</pre>
+  </div>
+<p>Isso garante que o tráfego da VM SRV2 seja roteado através do SRV1, aqui, <code>172.17.0.1</code> é o IP da interface de SRV1 que atuará como gateway.</p>
+
+<h2>Limpando Configuração Temporária</h2>
+
+<p>Para remover a configuração temporária, use:</p>
+<div class="code-box">
+    <button class="copy-btn" data-target="cmd13">Copiar</button>
+    <pre id="cmd13">
+ip address del 172.17.0.2/24 dev enp0s3
+ip link set down dev enp0s3</pre>
+  </div>
+<p>Isso desfaz a configuração anterior, útil para testes ou redefinições.</p>
+
+<h2>Configuração Permanente da Interface</h2>
+
+<p>Para tornar a configuração permanente, edite o arquivo <code>/etc/network/interfaces</code> e adicione as seguintes linhas:</p>
+<div class="code-box">
+    <button class="copy-btn" data-target="cmd14">Copiar</button>
+    <pre id="cmd14">
+# Interface de loopback
+auto lo
+iface lo inet loopback
+      
+# Interface com IP estático e gateway
+auto enp0s3
+iface enp0s3 inet static
+    address 172.17.0.2/24
+    gateway 172.17.0.1</pre>
+  </div>
+<p>Após editar o arquivo, reinicie a interface de rede com o comando <code>systemctl restart networking</code>.</p>
+<p>Isso garante que a configuração seja mantida após reinicializações.</p>
+
+<div class="note">
+    <p><strong>Nota: </strong>Abaixo Segue um vídeo com os comandos apresentados acima para exemplificar os comandos utilizados.</p>
+</div>
+
+<div class="asciinema-wrapper">
+  <div class="asciinema-container">
+    <asciinema-player 
+      src="cast/710549.cast"
+      font-size="25px"
+      theme="asciinema"
+      preload
+      auto-play="false">
+    </asciinema-player>
+  </div>
+</div>
+
+<h1>Conclusão</h1>
+
+<p>Com essas configurações, os alunos podem compreender e aplicar conceitos fundamentais de redes, como:</p>
+<ul>
+  <li>Configuração de endereços IP estáticos e dinâmicos.</li>
+  <li>Criação e gerenciamento de rotas de rede.</li>
+  <li>Configuração de NAT para compartilhamento de internet.</li>
+  <li>Persistência de configurações em sistemas Linux.</li>
+</ul>
+<p>Esses conhecimentos são essenciais para a administração de sistemas operacionais de redes e para a solução de problemas em ambientes reais.</p>
+
+  <script src="js/script.js"></script>
+</body>
+</html>

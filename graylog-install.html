@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guia Completo de Instalação do Graylog com Docker</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+            background-color: #f9f9f9;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+            margin-top: 30px;
+        }
+        h1 {
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        pre {
+            background-color: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-family: 'Courier New', Courier, monospace;
+            tab-size: 4;
+        }
+        code {
+            background-color: #2d2d2d;
+            color: #f8f8f2;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        .note {
+            background-color: #e7f5fe;
+            border-left: 4px solid #2196F3;
+            padding: 12px;
+            margin: 15px 0;
+            border-radius: 0 4px 4px 0;
+        }
+        .warning {
+            background-color: #fff8e1;
+            border-left: 4px solid #ffc107;
+            padding: 12px;
+            margin: 15px 0;
+            border-radius: 0 4px 4px 0;
+        }
+        .success {
+            background-color: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            padding: 12px;
+            margin: 15px 0;
+            border-radius: 0 4px 4px 0;
+        }
+        .command {
+            position: relative;
+            margin: 20px 0;
+        }
+        .command:before {
+            content: "$";
+            position: absolute;
+            left: -25px;
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        .step {
+            counter-increment: step-counter;
+            margin-bottom: 30px;
+        }
+        .step h3:before {
+            content: counter(step-counter) ". ";
+            color: #3498db;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Guia Completo de Instalação do Graylog com Docker</h1>
+        
+        <div class="note">
+            <strong>Visão Geral:</strong> Este documento fornece um guia passo a passo para instalar o Graylog usando Docker e Docker Compose. O Graylog é uma plataforma de gerenciamento de logs de código aberto que permite coletar, indexar e analisar grandes volumes de dados de log.
+        </div>
+
+        <h2>Pré-requisitos</h2>
+        <ul>
+            <li>Sistema operacional Linux (Ubuntu/Debian recomendados)</li>
+            <li>Usuário com privilégios sudo ou root</li>
+            <li>Conexão com a internet</li>
+            <li>Mínimo de 4GB de RAM (8GB recomendado para produção)</li>
+            <li>10GB de espaço livre em disco</li>
+        </ul>
+
+        <h2>Passo a Passo da Instalação</h2>
+        
+        <div class="step">
+            <h3>Atualização do Sistema</h3>
+            <div class="command">
+                <pre>apt update</pre>
+            </div>
+            <p>Atualiza a lista de pacotes disponíveis nos repositórios configurados.</p>
+        </div>
+
+        <div class="step">
+            <h3>Instalação de Dependências</h3>
+            <div class="command">
+                <pre>apt install -y ca-certificates curl gnupg</pre>
+            </div>
+            <p>Instala os pacotes necessários para:</p>
+            <ul>
+                <li><strong>ca-certificates</strong>: Gerencia certificados SSL</li>
+                <li><strong>curl</strong>: Ferramenta para transferência de dados</li>
+                <li><strong>gnupg</strong>: Implementação do GNU para PGP (gerenciamento de chaves)</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h3>Configuração do Repositório Docker</h3>
+            <div class="command">
+                <pre>install -m 0755 -d /etc/apt/keyrings</pre>
+            </div>
+            <p>Cria o diretório para armazenar chaves GPG com as permissões corretas (755).</p>
+            
+            <div class="command">
+                <pre>curl -fsSL https://download.docker.com/linux/$(. /etc/os-release && echo "$ID")/gpg | tee /etc/apt/keyrings/docker.asc > /dev/null</pre>
+            </div>
+            <p>Baixa e armazena a chave GPG oficial do Docker:</p>
+            <ul>
+                <li><code>$(. /etc/os-release && echo "$ID")</code> - Detecta automaticamente a distribuição Linux</li>
+                <li><code>tee /etc/apt/keyrings/docker.asc</code> - Salva a chave no local correto</li>
+            </ul>
+            
+            <div class="command">
+                <pre>chmod a+r /etc/apt/keyrings/docker.asc</pre>
+            </div>
+            <p>Ajusta as permissões da chave GPG para permitir leitura por todos os usuários.</p>
+            
+            <div class="command">
+                <pre>echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/$(. /etc/os-release && echo "$ID") $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null</pre>
+            </div>
+            <p>Adiciona o repositório oficial do Docker ao sistema:</p>
+            <ul>
+                <li><code>arch=$(dpkg --print-architecture)</code> - Detecta a arquitetura do sistema</li>
+                <li><code>signed-by=...</code> - Especifica a chave de autenticação</li>
+                <li><code>$(lsb_release -cs)</code> - Obtém o nome da versão da distribuição</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h3>Instalação do Docker e Componentes</h3>
+            <div class="command">
+                <pre>apt update</pre>
+            </div>
+            <p>Atualiza novamente a lista de pacotes, agora incluindo o repositório Docker.</p>
+            
+            <div class="command">
+                <pre>apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin</pre>
+            </div>
+            <p>Instala os seguintes componentes:</p>
+            <table>
+                <tr>
+                    <th>Componente</th>
+                    <th>Descrição</th>
+                </tr>
+                <tr>
+                    <td>docker-ce</td>
+                    <td>Docker Community Edition (serviço principal)</td>
+                </tr>
+                <tr>
+                    <td>docker-ce-cli</td>
+                    <td>Interface de linha de comando do Docker</td>
+                </tr>
+                <tr>
+                    <td>containerd.io</td>
+                    <td>Runtime de containers</td>
+                </tr>
+                <tr>
+                    <td>docker-buildx-plugin</td>
+                    <td>Plugin para construção multiplataforma</td>
+                </tr>
+                <tr>
+                    <td>docker-compose-plugin</td>
+                    <td>Plugin para Docker Compose</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="step">
+            <h3>Configuração do Sistema para Graylog</h3>
+            <div class="command">
+                <pre>sysctl -w vm.max_map_count=262144;</pre>
+            </div>
+            <p>Ajusta um parâmetro crítico do kernel necessário para o Elasticsearch (componente do Graylog):</p>
+            <ul>
+                <li><code>vm.max_map_count</code> controla o número máximo de áreas de mapeamento de memória que um processo pode ter</li>
+                <li>Valor recomendado para Elasticsearch: 262144</li>
+            </ul>
+            <div class="note">
+                <strong>Nota:</strong> Para tornar esta configuração permanente, adicione <code>vm.max_map_count=262144</code> ao arquivo <code>/etc/sysctl.conf</code>.
+            </div>
+        </div>
+
+        <div class="step">
+            <h3>Preparação do Ambiente Graylog</h3>
+            <div class="command">
+                <pre>mkdir -p /dados/graylog</pre>
+            </div>
+            <p>Cria o diretório base onde os arquivos de configuração e dados do Graylog serão armazenados.</p>
+            
+            <div class="command">
+                <pre>cd /dados/graylog</pre>
+            </div>
+            <p>Navega para o diretório recém-criado.</p>
+        </div>
+
+        <div class="step">
+            <h3>Download dos Arquivos de Configuração</h3>
+            <div class="command">
+                <pre>wget https://raw.githubusercontent.com/Graylog2/docker-compose/refs/heads/main/open-core/docker-compose.yml -O docker-compose.yml</pre>
+            </div>
+            <p>Baixa o arquivo docker-compose.yml oficial do Graylog (versão open-core).</p>
+            
+            <div class="command">
+                <pre>wget https://github.com/Graylog2/docker-compose/raw/refs/heads/main/open-core/.env.example -O .env</pre>
+            </div>
+            <p>Baixa o arquivo de exemplo de variáveis de ambiente e renomeia para <code>.env</code>.</p>
+        </div>
+
+        <div class="step">
+            <h3>Configuração de Segurança</h3>
+            <div class="command">
+                <pre>SECRET=$(< /dev/urandom tr -dc A-Z-a-z-0-9 | head -c${1:-96};echo;)</pre>
+            </div>
+            <p>Gera uma string secreta aleatória de 96 caracteres para segurança do Graylog:</p>
+            <ul>
+                <li><code>/dev/urandom</code> - Gerador de números pseudoaleatórios do sistema</li>
+                <li><code>tr -dc A-Z-a-z-0-9</code> - Filtra apenas caracteres alfanuméricos</li>
+                <li><code>head -c96</code> - Limita a 96 caracteres</li>
+            </ul>
+            
+            <div class="command">
+                <pre>sed -i "s/GRAYLOG_PASSWORD_SECRET=\"\"/GRAYLOG_PASSWORD_SECRET=\"$SECRET\"/g" .env</pre>
+            </div>
+            <p>Atualiza o arquivo <code>.env</code> com o segredo gerado.</p>
+            
+            <div class="command">
+                <pre>ROOT_PASSWORD=$(echo -n "abc123" | sha256sum | cut -d" " -f1)</pre>
+            </div>
+            <p>Gera o hash SHA-256 da senha padrão "abc123" para o usuário admin:</p>
+            <ul>
+                <li><code>echo -n</code> - Imprime sem nova linha</li>
+                <li><code>sha256sum</code> - Calcula o hash SHA-256</li>
+                <li><code>cut -d" " -f1</code> - Pega apenas a primeira parte do resultado</li>
+            </ul>
+            
+            <div class="command">
+                <pre>sed -i "s/GRAYLOG_ROOT_PASSWORD_SHA2=\"\"/GRAYLOG_ROOT_PASSWORD_SHA2=\"$ROOT_PASSWORD\"/g" .env</pre>
+            </div>
+            <p>Atualiza o arquivo <code>.env</code> com o hash da senha admin.</p>
+        </div>
+
+        <div class="step">
+            <h3>Inicialização dos Contêineres</h3>
+            <div class="command">
+                <pre>/usr/libexec/docker/cli-plugins/docker-compose up -d</pre>
+            </div>
+            <p>Inicia todos os contêineres do Graylog em modo detached (segundo plano).</p>
+            <p>Os serviços incluídos são:</p>
+            <ul>
+                <li><strong>Graylog</strong>: Servidor principal</li>
+                <li><strong>Elasticsearch</strong>: Motor de busca e indexação</li>
+                <li><strong>MongoDB</strong>: Banco de dados para configurações</li>
+            </ul>
+        </div>
+
+        <h2>Pós-Instalação e Acesso</h2>
+        
+        <div class="step">
+            <h3>Verificação dos Logs</h3>
+            <p>Para visualizar os logs e confirmar que o serviço está funcionando corretamente:</p>
+            <div class="command">
+                <pre>docker-compose -f docker-compose.yml logs</pre>
+            </div>
+            <p>Ou para acompanhar os logs em tempo real:</p>
+            <div class="command">
+                <pre>docker-compose -f docker-compose.yml logs -f</pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h3>Localizando as Credenciais</h3>
+            <p>Localize as linhas semelhantes as mostradas a seguir. Elas contém a senha inicial de acesso ao graylog.</p>
+            <div class="command">
+                <pre>graylog-1   | Initial configuration is accessible at 0.0.0.0:9000, with username 'admin' and password 'ToRZLCYMgV'.
+graylog-1   | Try clicking on http://admin:ToRZLCYMgV@0.0.0.0:9000</pre>
+            </div>
+            <div class="note">
+                <strong>Nota Importante:</strong> O usuário e senha acima, será utilizado para o primeiro login no ambiente.
+            </div>
+        </div>
+
+        <div class="step">
+            <h3>Acesso à Interface Web</h3>
+            <p>Acesse o Graylog através do navegador web:</p>
+            <div class="command">
+                <pre>http://&lt;IP-DO-SERVIDOR&gt;:9000</pre>
+            </div>
+            
+            <div class="success">
+                <p><strong>Credenciais padrão:</strong></p>
+                <ul>
+                    <li><strong>Usuário:</strong> admin</li>
+                    <li><strong>Senha:</strong> A senha encontrada nos Logs</li>
+                </ul>
+            </div>
+        </div>
+
+        <h2>Gerenciamento do Serviço</h2>
+        
+        <div class="step">
+            <h3>Comandos Úteis</h3>
+            <table>
+                <tr>
+                    <th>Comando</th>
+                    <th>Descrição</th>
+                </tr>
+                <tr>
+                    <td><code>docker-compose -f docker-compose.yml ps</code></td>
+                    <td>Lista os contêineres e seus status</td>
+                </tr>
+                <tr>
+                    <td><code>docker-compose -f docker-compose.yml stop</code></td>
+                    <td>Para os serviços</td>
+                </tr>
+                <tr>
+                    <td><code>docker-compose -f docker-compose.yml start</code></td>
+                    <td>Inicia os serviços</td>
+                </tr>
+                <tr>
+                    <td><code>docker-compose -f docker-compose.yml restart</code></td>
+                    <td>Reinicia os serviços</td>
+                </tr>
+                <tr>
+                    <td><code>docker-compose -f docker-compose.yml down</code></td>
+                    <td>Para e remove os contêineres (mantém os volumes)</td>
+                </tr>
+                <tr>
+                    <td><code>docker-compose -f docker-compose.yml up -d</code></td>
+                    <td>Reinicia os serviços após alterações</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
