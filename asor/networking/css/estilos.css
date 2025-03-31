@@ -92,14 +92,12 @@ code {
 
 .asciinema-container {
   width: 100%;
-  max-width: 960px;
+  max-width: 960px;     /* Largura máxima desejada */
+  aspect-ratio: 4 / 3;  /* Mantém proporção (opcional, ajustável) */
 }
 
-/* Adiciona um tamanho mínimo de altura e ajuste de espaçamento */
-.asciinema-container asciinema-player {
-  display: block;
+.asciinema-container iframe {
   width: 100%;
-  height: auto;
-  min-height: 500px;
+  height: 100%;
   border: none;
 }
